@@ -85,7 +85,7 @@ ArrayList<Face> constructFaces(ImageSequence withLoadedFaces) {
   ArrayList<Face> temp = new ArrayList<Face>();
   int num_faces = withLoadedFaces.faceImages.size();
   for (int i = 0; i < num_faces; i++) {
-    temp.add(new Face(this, withLoadedFaces.getNextImage()));
+    temp.add(new Face(withLoadedFaces.getNextImage()));
   }
 
 return temp;
