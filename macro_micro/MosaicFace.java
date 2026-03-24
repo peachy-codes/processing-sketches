@@ -12,7 +12,7 @@ class MosaicFace extends Face {
         this.emptyColor = emptyColor;
     }
 
-    public void updateFromImages(ArrayList<PImage> activeImages, RegionMap regionMap, int shiftOffset) {
+    public void updateFromImages(ArrayList<PImage> activeImages, RegionMap regionMap, int[] regionAssignments) {
         this.img.loadPixels();
         
         int numActive = activeImages.size();
@@ -25,11 +25,6 @@ class MosaicFace extends Face {
 
         for (PImage sourceImg : activeImages) {
             sourceImg.loadPixels();
-        }
-
-        int[] regionAssignments = new int[regionMap.numRegions];
-        for (int i = 0; i < regionMap.numRegions; i++) {
-            regionAssignments[i] = (i + shiftOffset) % numActive;
         }
 
         for (int x = 0; x < this.img.width; x++) {
@@ -74,8 +69,6 @@ class MosaicFace extends Face {
             }
             p.endShape();
             p.popStyle();
-        } else {
-            p.image(this.img, 0, 0);
         }
     }
 }

@@ -23,34 +23,43 @@ float[] drawIndices;
 
 float scanSpeed = 0.40f;
 int beamTailLength = 5;
-int shiftOffset = 0;
 float beamAlpha = 80.0f;
 
 int numFacesConfig = 50;
 float aberrationOffset = 3.0f;
-float noiseScale = 0.05f;
 
 boolean effectActive = false;
 
-float currentRingRadius = 600.0f;
-float startRingRadius = 600.0f;
-float stopRingRadius = 1000.0f;
-float rateRingRadius = 0.05f;
+float currentNoiseScale = 0.05f;
+float baseNoiseScale = 0.05f;
+float activeNoiseScale = 0.2f;
+float rateNoiseScale = 0.05f;
 
-float currentBackgroundZ = -800.0f;
-float startBackgroundZ = -800.0f;
-float stopBackgroundZ = -1500.0f;
-float rateBackgroundZ = 0.05f;
+float currentRingRadius = 100.0f;
+float baseRingRadius = 100.0f;
+float activeRingRadius = 1500.0f;
+float rateRingRadius = 0.01f;
 
-float currentBackgroundDim = 0.28f;
-float startBackgroundDim = 0.28f;
-float stopBackgroundDim = 0.8f;
+float currentBackgroundZ = -3000.0f;
+float baseBackgroundZ = -3000.0f;
+float activeBackgroundZ = -1200.0f;
+float rateBackgroundZ = 0.001f;
+
+float currentBackgroundDim = 0.00f;
+float baseBackgroundDim = 0.00f;
+float activeBackgroundDim = 0.37f;
 float rateBackgroundDim = 0.05f;
 
-float currentRingRotSpeed = 0.005f;
-float startRingRotSpeed = 0.005f;
-float stopRingRotSpeed = 0.02f;
-float rateRingRotSpeed = 0.05f;
+float currentRingRotSpeed = 0.0001f;
+float baseRingRotSpeed = 0.0001f;
+float activeRingRotSpeed = 0.001f;
+float rateRingRotSpeed = 0.01f;
+
+float shiftTimer = 0.0f;
+float currentShiftInterval = 100.0f;
+float baseShiftInterval = 100.0f;
+float activeShiftInterval = 10.0f;
+float rateShiftInterval = 0.05f;
 
 ArrayList<PImage> originalImages;
 ArrayList<PImage> aberratedImages;
@@ -71,34 +80,30 @@ void setup() {
     cp5.addSlider("numFacesConfig").setPosition(20, 110).setRange(1, 100).setValue(50);
     cp5.addSlider("aberrationOffset").setPosition(20, 140).setRange(0.0f, 15.0f).setValue(3.0f).onChange(event -> applyAberrationEffect());
 
-    cp5.addSlider("startRingRadius").setPosition(20, 170).setRange(100.0f, 1500.0f).setValue(100.0f);
-    cp5.addSlider("stopRingRadius").setPosition(180, 170).setRange(100.0f, 1500.0f).setValue(1500.0f);
+    cp5.addSlider("baseRingRadius").setPosition(20, 170).setRange(100.0f, 1500.0f).setValue(100.0f);
+    cp5.addSlider("activeRingRadius").setPosition(180, 170).setRange(100.0f, 1500.0f).setValue(1500.0f);
     cp5.addSlider("rateRingRadius").setPosition(340, 170).setRange(0.001f, 0.2f).setValue(0.01f);
 
-    cp5.addSlider("startBackgroundZ").setPosition(20, 200).setRange(-3000.0f, 0.0f).setValue(-3000.0f);
-    cp5.addSlider("stopBackgroundZ").setPosition(180, 200).setRange(-3000.0f, 0.0f).setValue(-1200.0f);
+    cp5.addSlider("baseBackgroundZ").setPosition(20, 200).setRange(-3000.0f, 0.0f).setValue(-3000.0f);
+    cp5.addSlider("activeBackgroundZ").setPosition(180, 200).setRange(-3000.0f, 0.0f).setValue(-1200.0f);
     cp5.addSlider("rateBackgroundZ").setPosition(340, 200).setRange(0.001f, 0.2f).setValue(0.001f);
 
-    cp5.addSlider("startRingRotSpeed").setPosition(20, 230).setRange(0.0f, 0.1f).setValue(0.0001f);
-    cp5.addSlider("stopRingRotSpeed").setPosition(180, 230).setRange(0.0f, 0.1f).setValue(0.001f);
+    cp5.addSlider("baseRingRotSpeed").setPosition(20, 230).setRange(0.0f, 0.1f).setValue(0.0001f);
+    cp5.addSlider("activeRingRotSpeed").setPosition(180, 230).setRange(0.0f, 0.1f).setValue(0.001f);
     cp5.addSlider("rateRingRotSpeed").setPosition(340, 230).setRange(0.001f, 0.2f).setValue(0.01f);
 
-    cp5.addSlider("startBackgroundDim").setPosition(20, 260).setRange(0.0f, 1.0f).setValue(0.00f);
-    cp5.addSlider("stopBackgroundDim").setPosition(180, 260).setRange(0.0f, 1.0f).setValue(0.37f);
+    cp5.addSlider("baseBackgroundDim").setPosition(20, 260).setRange(0.0f, 1.0f).setValue(0.00f);
+    cp5.addSlider("activeBackgroundDim").setPosition(180, 260).setRange(0.0f, 1.0f).setValue(0.37f);
     cp5.addSlider("rateBackgroundDim").setPosition(340, 260).setRange(0.001f, 0.2f).setValue(0.05f);
 
-    cp5.addRadioButton("patternSelect")
-       .setPosition(20, 290)
-       .setSize(20, 20)
-       .setItemsPerRow(3)
-       .setSpacingColumn(60)
-       .addItem("Voronoi", 0)
-       .addItem("Perlin Noise", 1)
-       .addItem("Grid", 2)
-       .activate(0);
+    cp5.addSlider("baseShiftInterval").setPosition(20, 290).setRange(10.0f, 300.0f).setValue(100.0f);
+    cp5.addSlider("activeShiftInterval").setPosition(180, 290).setRange(1.0f, 100.0f).setValue(10.0f);
+    cp5.addSlider("rateShiftInterval").setPosition(340, 290).setRange(0.001f, 0.2f).setValue(0.05f);
 
-    cp5.addSlider("noiseScale").setPosition(20, 320).setRange(0.01f, 0.5f).setValue(0.05f);
-
+    cp5.addSlider("baseNoiseScale").setPosition(20, 320).setRange(0.01f, 0.5f).setValue(0.05f);
+    cp5.addSlider("activeNoiseScale").setPosition(180, 320).setRange(0.01f, 0.5f).setValue(0.2f);
+    cp5.addSlider("rateNoiseScale").setPosition(340, 320).setRange(0.001f, 0.2f).setValue(0.05f);
+    
     cp5.addButton("applyLayout").setPosition(20, 350).setSize(100, 20);
 
     faceImages = new ImageSequence(this);
@@ -146,23 +151,11 @@ void applyLayout() {
     }
 
     regionMap = new RegionMap(this, resizeDims, resizeDims, numFacesConfig);
-    
-    int pMode = 0;
-    if (cp5.get(RadioButton.class, "patternSelect") != null) {
-        pMode = (int)cp5.get(RadioButton.class, "patternSelect").getValue();
-    }
-    
-    if (pMode == 1) {
-        regionMap.generateNoise(noiseScale);
-    } else if (pMode == 2) {
-        regionMap.generateGrid();
-    } else {
-        regionMap.generateVoronoi();
-    }
+    regionMap.generateNoise(currentNoiseScale);
 
     regionAssignments = new int[regionMap.numRegions];
     for (int i = 0; i < regionMap.numRegions; i++) {
-        regionAssignments[i] = (i + shiftOffset) % numFacesConfig;
+        regionAssignments[i] = 0;
     }
 
     regionToVertices = new ArrayList<ArrayList<Integer>>();
@@ -184,6 +177,7 @@ void applyLayout() {
     }
 
     applyAberrationEffect();
+    applyShiftOffset();
 }
 
 void applyAberrationEffect() {
@@ -221,7 +215,7 @@ void applyAberrationEffect() {
     for (int i = 0; i < facesToUse.size(); i++) {
         facesToUse.get(i).img = aberratedImages.get(i);
     }
-    targetFace.updateFromImages(getActiveImages(), regionMap, shiftOffset);
+    targetFace.updateFromImages(getActiveImages(), regionMap, regionAssignments);
 
     generateDisplayImages();
 }
@@ -242,22 +236,60 @@ void updateFacePositions() {
 void draw() {
     background(20);
 
-    float targetRingRadius = effectActive ? stopRingRadius : startRingRadius;
+    float targetRingRadius = effectActive ? activeRingRadius : baseRingRadius;
     currentRingRadius = lerp(currentRingRadius, targetRingRadius, rateRingRadius);
 
-    float targetBackgroundZ = effectActive ? stopBackgroundZ : startBackgroundZ;
+    float targetBackgroundZ = effectActive ? activeBackgroundZ : baseBackgroundZ;
     currentBackgroundZ = lerp(currentBackgroundZ, targetBackgroundZ, rateBackgroundZ);
 
-    float targetRingRotSpeed = effectActive ? stopRingRotSpeed : startRingRotSpeed;
+    float targetRingRotSpeed = effectActive ? activeRingRotSpeed : baseRingRotSpeed;
     currentRingRotSpeed = lerp(currentRingRotSpeed, targetRingRotSpeed, rateRingRotSpeed);
 
-    float targetBackgroundDim = effectActive ? stopBackgroundDim : startBackgroundDim;
+    float targetBackgroundDim = effectActive ? activeBackgroundDim : baseBackgroundDim;
     float prevBackgroundDim = currentBackgroundDim;
     currentBackgroundDim = lerp(currentBackgroundDim, targetBackgroundDim, rateBackgroundDim);
+    
+    float targetNoiseScale = effectActive ? activeNoiseScale : baseNoiseScale;
+    float prevNoiseScale = currentNoiseScale;
+    currentNoiseScale = lerp(currentNoiseScale, targetNoiseScale, rateNoiseScale);
+    
+    float targetShiftInterval = effectActive ? activeShiftInterval : baseShiftInterval;
+    currentShiftInterval = lerp(currentShiftInterval, targetShiftInterval, rateShiftInterval);
 
-    if (abs(currentBackgroundDim - prevBackgroundDim) > 0.005f) {
+    boolean needsMapUpdate = abs(currentNoiseScale - prevNoiseScale) > 0.0001f;
+    boolean needsImageUpdate = abs(currentBackgroundDim - prevBackgroundDim) > 0.0001f;
+
+    if (needsMapUpdate) {
+        regionMap.generateNoise(currentNoiseScale);
+        
+        for (int i = 0; i < regionMap.numRegions; i++) {
+            regionToVertices.get(i).clear();
+        }
+        for (int i = 0; i < targetFace.uvCoords.size(); i++) {
+            float[] uv = targetFace.uvCoords.get(i);
+            int px = constrain((int)(uv[0] * regionMap.width), 0, regionMap.width - 1);
+            int py = constrain((int)(uv[1] * regionMap.height), 0, regionMap.height - 1);
+            int rId = regionMap.map[px][py];
+            regionToVertices.get(rId).add(i);
+        }
+        
+        targetFace.updateFromImages(getActiveImages(), regionMap, regionAssignments);
+        needsImageUpdate = true;
+    }
+
+    shiftTimer += 1.0f;
+    if (shiftTimer >= currentShiftInterval) {
+        applyShiftOffset();
+        shiftTimer = 0.0f;
+        needsImageUpdate = false; 
+    }
+
+    if (needsImageUpdate) {
         generateDisplayImages();
     }
+
+    ringRotationAngle += currentRingRotSpeed;
+    updateFacePositions();
 
     ringRotationAngle += currentRingRotSpeed;
     updateFacePositions();
@@ -309,7 +341,6 @@ void draw() {
 
 void drawBeams() {
     strokeWeight(2);
-    applyShiftOffset();
     int num_faces = facesToUse.size();
 
     for (int regionId = 0; regionId < regionMap.numRegions; regionId++) {
@@ -412,17 +443,72 @@ ArrayList<PImage> getActiveImages() {
 }
 
 void applyShiftOffset() {
-  shiftOffset++;
-  for (int i = 0; i < regionMap.numRegions; i++) {
-      regionAssignments[i] = (i + shiftOffset) % facesToUse.size();
-  }
-  targetFace.updateFromImages(getActiveImages(), regionMap, shiftOffset);
-  generateDisplayImages();
+    int totalFaces = facesToUse.size();
+    if (totalFaces == 0) return;
+    
+    int minFaces = max(1, totalFaces / 2);
+    int numFacesToSelect = (int)random(minFaces, totalFaces + 1);
+
+    ArrayList<Integer> available = new ArrayList<Integer>();
+    for (int i = 0; i < totalFaces; i++) {
+        available.add(i);
+    }
+
+    ArrayList<Integer> selectedFaces = new ArrayList<Integer>();
+    for (int i = 0; i < numFacesToSelect; i++) {
+        int idx = (int)random(available.size());
+        selectedFaces.add(available.remove(idx));
+    }
+
+    for (int i = 0; i < regionMap.numRegions; i++) {
+        regionAssignments[i] = selectedFaces.get((int)random(selectedFaces.size()));
+    }
+
+    targetFace.updateFromImages(getActiveImages(), regionMap, regionAssignments);
+    generateDisplayImages();
 }
 
+void printConfigState() {
+    System.out.println("--- Current Config State ---");
+    System.out.println("effectActive = " + effectActive);
+    System.out.println("scanSpeed = " + scanSpeed);
+    System.out.println("beamTailLength = " + beamTailLength);
+    System.out.println("beamAlpha = " + beamAlpha);
+    System.out.println("numFacesConfig = " + numFacesConfig);
+    System.out.println("aberrationOffset = " + aberrationOffset);
+    System.out.println("baseRingRadius = " + baseRingRadius);
+    System.out.println("activeRingRadius = " + activeRingRadius);
+    System.out.println("rateRingRadius = " + rateRingRadius);
+    System.out.println("currentRingRadius = " + currentRingRadius);
+    System.out.println("baseBackgroundZ = " + baseBackgroundZ);
+    System.out.println("activeBackgroundZ = " + activeBackgroundZ);
+    System.out.println("rateBackgroundZ = " + rateBackgroundZ);
+    System.out.println("currentBackgroundZ = " + currentBackgroundZ);
+    System.out.println("baseRingRotSpeed = " + baseRingRotSpeed);
+    System.out.println("activeRingRotSpeed = " + activeRingRotSpeed);
+    System.out.println("rateRingRotSpeed = " + rateRingRotSpeed);
+    System.out.println("currentRingRotSpeed = " + currentRingRotSpeed);
+    System.out.println("baseBackgroundDim = " + baseBackgroundDim);
+    System.out.println("activeBackgroundDim = " + activeBackgroundDim);
+    System.out.println("rateBackgroundDim = " + rateBackgroundDim);
+    System.out.println("currentBackgroundDim = " + currentBackgroundDim);
+    System.out.println("baseShiftInterval = " + baseShiftInterval);
+    System.out.println("activeShiftInterval = " + activeShiftInterval);
+    System.out.println("rateShiftInterval = " + rateShiftInterval);
+    System.out.println("currentShiftInterval = " + currentShiftInterval);
+    System.out.println("baseNoiseScale = " + baseNoiseScale);
+    System.out.println("activeNoiseScale = " + activeNoiseScale);
+    System.out.println("rateNoiseScale = " + rateNoiseScale);
+    System.out.println("currentNoiseScale = " + currentNoiseScale);
+    System.out.println("----------------------------");
+}
 void keyPressed() {
-    if (key == 't') { effectActive = !effectActive; }
+    if (key == 't') { 
+        effectActive = !effectActive;
+        System.out.println("effectiveActive state = " + effectActive);
+    }
+    if (key == 'y') {printConfigState();}
     if (key == 'o') { zoom *= 1.1; }
     if (key == 'p') { zoom *= 0.9; }
-    if (key == 's') {applyShiftOffset();}
+    if (key == 's') { applyShiftOffset();} // deprecated at this point i believe
 }
