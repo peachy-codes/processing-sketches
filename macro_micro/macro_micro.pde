@@ -11,7 +11,7 @@ RegionMap regionMap;
 int activeIndex = 0;
 float rotX = 0;
 float rotY = 0;
-float zoom = 3.0f;
+float zoom = 1.2f;
 float defaultEyeZ;
 float currentEyeZ;
 
@@ -27,8 +27,8 @@ int shiftOffset = 0;
 float beamAlpha = 80.0f;
 
 int numFacesConfig = 50;
-
 float aberrationOffset = 3.0f;
+float noiseScale = 0.05f;
 
 boolean effectActive = false;
 
@@ -57,7 +57,7 @@ ArrayList<PImage> aberratedImages;
 ArrayList<PImage> displayImages;
 
 void setup() {
-    size(1920, 1080, P3D);
+    size(1280, 1024, P3D);
     textureMode(NORMAL);
     defaultEyeZ = (height / 2.0f) / tan(PI * 30.0f / 180.0f);
     frameRate(60);
@@ -71,23 +71,35 @@ void setup() {
     cp5.addSlider("numFacesConfig").setPosition(20, 110).setRange(1, 100).setValue(50);
     cp5.addSlider("aberrationOffset").setPosition(20, 140).setRange(0.0f, 15.0f).setValue(3.0f).onChange(event -> applyAberrationEffect());
 
-    cp5.addSlider("startRingRadius").setPosition(20, 170).setRange(100.0f, 1500.0f).setValue(600.0f);
-    cp5.addSlider("stopRingRadius").setPosition(180, 170).setRange(100.0f, 1500.0f).setValue(1000.0f);
-    cp5.addSlider("rateRingRadius").setPosition(340, 170).setRange(0.001f, 0.2f).setValue(0.05f);
+    cp5.addSlider("startRingRadius").setPosition(20, 170).setRange(100.0f, 1500.0f).setValue(100.0f);
+    cp5.addSlider("stopRingRadius").setPosition(180, 170).setRange(100.0f, 1500.0f).setValue(1500.0f);
+    cp5.addSlider("rateRingRadius").setPosition(340, 170).setRange(0.001f, 0.2f).setValue(0.01f);
 
-    cp5.addSlider("startBackgroundZ").setPosition(20, 200).setRange(-3000.0f, 0.0f).setValue(-800.0f);
-    cp5.addSlider("stopBackgroundZ").setPosition(180, 200).setRange(-3000.0f, 0.0f).setValue(-1500.0f);
-    cp5.addSlider("rateBackgroundZ").setPosition(340, 200).setRange(0.001f, 0.2f).setValue(0.05f);
+    cp5.addSlider("startBackgroundZ").setPosition(20, 200).setRange(-3000.0f, 0.0f).setValue(-3000.0f);
+    cp5.addSlider("stopBackgroundZ").setPosition(180, 200).setRange(-3000.0f, 0.0f).setValue(-1200.0f);
+    cp5.addSlider("rateBackgroundZ").setPosition(340, 200).setRange(0.001f, 0.2f).setValue(0.001f);
 
-    cp5.addSlider("startRingRotSpeed").setPosition(20, 230).setRange(0.0f, 0.1f).setValue(0.005f);
-    cp5.addSlider("stopRingRotSpeed").setPosition(180, 230).setRange(0.0f, 0.1f).setValue(0.02f);
-    cp5.addSlider("rateRingRotSpeed").setPosition(340, 230).setRange(0.001f, 0.2f).setValue(0.05f);
+    cp5.addSlider("startRingRotSpeed").setPosition(20, 230).setRange(0.0f, 0.1f).setValue(0.0001f);
+    cp5.addSlider("stopRingRotSpeed").setPosition(180, 230).setRange(0.0f, 0.1f).setValue(0.001f);
+    cp5.addSlider("rateRingRotSpeed").setPosition(340, 230).setRange(0.001f, 0.2f).setValue(0.01f);
 
-    cp5.addSlider("startBackgroundDim").setPosition(20, 260).setRange(0.0f, 1.0f).setValue(0.28f);
-    cp5.addSlider("stopBackgroundDim").setPosition(180, 260).setRange(0.0f, 1.0f).setValue(0.8f);
+    cp5.addSlider("startBackgroundDim").setPosition(20, 260).setRange(0.0f, 1.0f).setValue(0.00f);
+    cp5.addSlider("stopBackgroundDim").setPosition(180, 260).setRange(0.0f, 1.0f).setValue(0.37f);
     cp5.addSlider("rateBackgroundDim").setPosition(340, 260).setRange(0.001f, 0.2f).setValue(0.05f);
 
-    cp5.addButton("applyLayout").setPosition(20, 290).setSize(100, 20);
+    cp5.addRadioButton("patternSelect")
+       .setPosition(20, 290)
+       .setSize(20, 20)
+       .setItemsPerRow(3)
+       .setSpacingColumn(60)
+       .addItem("Voronoi", 0)
+       .addItem("Perlin Noise", 1)
+       .addItem("Grid", 2)
+       .activate(0);
+
+    cp5.addSlider("noiseScale").setPosition(20, 320).setRange(0.01f, 0.5f).setValue(0.05f);
+
+    cp5.addButton("applyLayout").setPosition(20, 350).setSize(100, 20);
 
     faceImages = new ImageSequence(this);
     faceImages.loadImages("data/faces", "data/uv_maps");
@@ -133,8 +145,20 @@ void applyLayout() {
         f.activate(); 
     }
 
-    regionMap = new RegionMap(resizeDims, resizeDims, numFacesConfig);
-    regionMap.generateVoronoi();
+    regionMap = new RegionMap(this, resizeDims, resizeDims, numFacesConfig);
+    
+    int pMode = 0;
+    if (cp5.get(RadioButton.class, "patternSelect") != null) {
+        pMode = (int)cp5.get(RadioButton.class, "patternSelect").getValue();
+    }
+    
+    if (pMode == 1) {
+        regionMap.generateNoise(noiseScale);
+    } else if (pMode == 2) {
+        regionMap.generateGrid();
+    } else {
+        regionMap.generateVoronoi();
+    }
 
     regionAssignments = new int[regionMap.numRegions];
     for (int i = 0; i < regionMap.numRegions; i++) {
@@ -285,6 +309,7 @@ void draw() {
 
 void drawBeams() {
     strokeWeight(2);
+    applyShiftOffset();
     int num_faces = facesToUse.size();
 
     for (int regionId = 0; regionId < regionMap.numRegions; regionId++) {
@@ -386,16 +411,18 @@ ArrayList<PImage> getActiveImages() {
     return activeImages;
 }
 
+void applyShiftOffset() {
+  shiftOffset++;
+  for (int i = 0; i < regionMap.numRegions; i++) {
+      regionAssignments[i] = (i + shiftOffset) % facesToUse.size();
+  }
+  targetFace.updateFromImages(getActiveImages(), regionMap, shiftOffset);
+  generateDisplayImages();
+}
+
 void keyPressed() {
     if (key == 't') { effectActive = !effectActive; }
     if (key == 'o') { zoom *= 1.1; }
     if (key == 'p') { zoom *= 0.9; }
-    if (key == 's') { 
-        shiftOffset++;
-        for (int i = 0; i < regionMap.numRegions; i++) {
-            regionAssignments[i] = (i + shiftOffset) % facesToUse.size();
-        }
-        targetFace.updateFromImages(getActiveImages(), regionMap, shiftOffset);
-        generateDisplayImages();
-    }
+    if (key == 's') {applyShiftOffset();}
 }
