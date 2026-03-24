@@ -1,4 +1,5 @@
 import controlP5.*;
+import java.io.File;
 
 ControlP5 cp5;
 ImageSequence faceImages;
@@ -21,14 +22,18 @@ ArrayList<ArrayList<Integer>> regionToVertices;
 int[] regionAssignments;
 float[] drawIndices;
 
+boolean loadConfigOnLaunch = true;
+boolean effectActive = false;
+boolean isReady = false;
+boolean isLoading = false;
+boolean animateFaces = false;
+
 float scanSpeed = 0.40f;
 int beamTailLength = 5;
 float beamAlpha = 80.0f;
 
 int numFacesConfig = 50;
 float aberrationOffset = 3.0f;
-
-boolean effectActive = false;
 
 float currentNoiseScale = 0.05f;
 float baseNoiseScale = 0.05f;
@@ -40,8 +45,8 @@ float baseRingRadius = 100.0f;
 float activeRingRadius = 1500.0f;
 float rateRingRadius = 0.01f;
 
-float currentBackgroundZ = -3000.0f;
-float baseBackgroundZ = -3000.0f;
+float currentBackgroundZ = -6000.0f;
+float baseBackgroundZ = -6000.0f;
 float activeBackgroundZ = -1200.0f;
 float rateBackgroundZ = 0.001f;
 
@@ -65,6 +70,9 @@ ArrayList<PImage> originalImages;
 ArrayList<PImage> aberratedImages;
 ArrayList<PImage> displayImages;
 
+JSONArray globalAnimationData;
+JSONArray globalTriangleData;
+
 void setup() {
     size(1280, 1024, P3D);
     textureMode(NORMAL);
@@ -78,13 +86,15 @@ void setup() {
     cp5.addSlider("beamTailLength").setPosition(20, 50).setRange(1, 50).setValue(5);
     cp5.addSlider("beamAlpha").setPosition(20, 80).setRange(10.0f, 255.0f).setValue(80.0f);
     cp5.addSlider("numFacesConfig").setPosition(20, 110).setRange(1, 100).setValue(50);
-    cp5.addSlider("aberrationOffset").setPosition(20, 140).setRange(0.0f, 15.0f).setValue(3.0f).onChange(event -> applyAberrationEffect());
+    cp5.addSlider("aberrationOffset").setPosition(20, 140).setRange(0.0f, 15.0f).setValue(3.0f).onChange(event -> {
+        if (isReady) applyAberrationEffect();
+    });
 
-    cp5.addSlider("baseRingRadius").setPosition(20, 170).setRange(10.0f, 1500.0f).setValue(10.0f);
+    cp5.addSlider("baseRingRadius").setPosition(20, 170).setRange(100.0f, 1500.0f).setValue(100.0f);
     cp5.addSlider("activeRingRadius").setPosition(180, 170).setRange(100.0f, 1500.0f).setValue(1500.0f);
     cp5.addSlider("rateRingRadius").setPosition(340, 170).setRange(0.001f, 0.2f).setValue(0.01f);
 
-    cp5.addSlider("baseBackgroundZ").setPosition(20, 200).setRange(-3000.0f, 0.0f).setValue(-3000.0f);
+    cp5.addSlider("baseBackgroundZ").setPosition(20, 200).setRange(-6000.0f, 0.0f).setValue(-3000.0f);
     cp5.addSlider("activeBackgroundZ").setPosition(180, 200).setRange(-3000.0f, 0.0f).setValue(-1200.0f);
     cp5.addSlider("rateBackgroundZ").setPosition(340, 200).setRange(0.001f, 0.2f).setValue(0.001f);
 
@@ -100,11 +110,31 @@ void setup() {
     cp5.addSlider("activeShiftInterval").setPosition(180, 290).setRange(1.0f, 100.0f).setValue(10.0f);
     cp5.addSlider("rateShiftInterval").setPosition(340, 290).setRange(0.001f, 0.2f).setValue(0.05f);
 
-    cp5.addSlider("baseNoiseScale").setPosition(20, 320).setRange(0.01f, 0.5f).setValue(0.05f);
+    cp5.addSlider("baseNoiseScale").setPosition(20, 320).setRange(0.01f, 0.9f).setValue(0.05f);
     cp5.addSlider("activeNoiseScale").setPosition(180, 320).setRange(0.01f, 0.5f).setValue(0.2f);
     cp5.addSlider("rateNoiseScale").setPosition(340, 320).setRange(0.001f, 0.2f).setValue(0.05f);
     
     cp5.addButton("applyLayout").setPosition(20, 350).setSize(100, 20);
+
+    if (loadConfigOnLaunch) {
+        File configFile = new File(sketchPath("data/config.json"));
+        if (configFile.exists()) {
+            cp5.loadProperties("data/config.json");
+            System.out.println("Config loaded from data/config.json");
+            
+            currentRingRadius = baseRingRadius;
+            currentBackgroundZ = baseBackgroundZ;
+            currentRingRotSpeed = baseRingRotSpeed;
+            currentBackgroundDim = baseBackgroundDim;
+            currentShiftInterval = baseShiftInterval;
+            currentNoiseScale = baseNoiseScale;
+        }
+    }
+}
+
+void initializeHeavyAssets() {
+    globalAnimationData = loadJSONArray("data/animation_1.json");
+    globalTriangleData = loadJSONArray("data/triangles.json");
 
     faceImages = new ImageSequence(this);
     faceImages.loadImages("data/faces", "data/uv_maps");
@@ -127,12 +157,14 @@ void setup() {
     targetFace.x = 0;
     targetFace.y = 0;
     targetFace.z = 200.0f;
-    targetFace.loadMeshData(this, "data/animation_1.json", "data/triangles.json");
+    targetFace.loadMeshData(globalAnimationData, globalTriangleData);
 
     aberratedImages = new ArrayList<PImage>();
     displayImages = new ArrayList<PImage>();
 
     applyLayout();
+    
+    isReady = true;
 }
 
 void applyLayout() {
@@ -146,7 +178,7 @@ void applyLayout() {
     updateFacePositions();
     
     for (Face f : facesToUse) {
-        f.loadMeshData(this, "data/animation_1.json", "data/triangles.json");
+        f.loadMeshData(globalAnimationData, globalTriangleData);
         f.activate(); 
     }
 
@@ -234,6 +266,20 @@ void updateFacePositions() {
 }
 
 void draw() {
+    if (!isReady) {
+        background(20);
+        fill(255);
+        textSize(24);
+        textAlign(CENTER, CENTER);
+        text("Loading JSON data and rendering layout...", width/2, height/2);
+        
+        if (!isLoading) {
+            isLoading = true;
+            thread("initializeHeavyAssets");
+        }
+        return; 
+    }
+
     background(20);
 
     float targetRingRadius = effectActive ? activeRingRadius : baseRingRadius;
@@ -258,7 +304,7 @@ void draw() {
 
     boolean needsMapUpdate = abs(currentNoiseScale - prevNoiseScale) > 0.0001f;
     boolean needsImageUpdate = abs(currentBackgroundDim - prevBackgroundDim) > 0.0001f;
-
+    
     if (needsMapUpdate) {
         regionMap.generateNoise(currentNoiseScale);
         
@@ -276,20 +322,17 @@ void draw() {
         targetFace.updateFromImages(getActiveImages(), regionMap, regionAssignments);
         needsImageUpdate = true;
     }
-
+    
     shiftTimer += 1.0f;
     if (shiftTimer >= currentShiftInterval) {
         applyShiftOffset();
         shiftTimer = 0.0f;
-        needsImageUpdate = false; 
+        needsImageUpdate = false;
     }
 
     if (needsImageUpdate) {
         generateDisplayImages();
     }
-
-    ringRotationAngle += currentRingRotSpeed;
-    updateFacePositions();
 
     ringRotationAngle += currentRingRotSpeed;
     updateFacePositions();
@@ -313,7 +356,9 @@ void draw() {
         Face f = facesToUse.get(i);
         pushMatrix();
         translate(f.x, f.y, f.z);
-        f.updateAnimation();
+        if (animateFaces) {
+          f.updateAnimation();
+        }
         
         f.img = displayImages.get(i);
         f.draw(this);
@@ -324,7 +369,9 @@ void draw() {
 
     pushMatrix();
     translate(targetFace.x, targetFace.y, targetFace.z);
-    targetFace.updateAnimation();
+    if (animateFaces) {
+        targetFace.updateAnimation();
+    }
     targetFace.draw(this);
     popMatrix();
 
@@ -502,13 +549,19 @@ void printConfigState() {
     System.out.println("currentNoiseScale = " + currentNoiseScale);
     System.out.println("----------------------------");
 }
+
 void keyPressed() {
     if (key == 't') { 
         effectActive = !effectActive;
         System.out.println("effectiveActive state = " + effectActive);
     }
-    if (key == 'y') {printConfigState();}
+    if (key == 'c') {
+        cp5.saveProperties("data/config.json");
+        System.out.println("Configuration saved to data/config.json");
+    }
+    if (key == 'i') { printConfigState(); }
     if (key == 'o') { zoom *= 1.1; }
     if (key == 'p') { zoom *= 0.9; }
-    if (key == 's') { applyShiftOffset();} // deprecated at this point i believe
+    if (key == 's') { applyShiftOffset(); }
+    if (key == 'a') {animateFaces = !animateFaces;}
 }

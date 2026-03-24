@@ -72,15 +72,17 @@ class Face {
         }
     }
 
-    public void loadMeshData(PApplet p, String animFile, String triFile) {
-        JSONArray triJson = p.loadJSONArray(triFile);
-        for (int i = 0; i < triJson.size(); i++) {
-            JSONArray tri = triJson.getJSONArray(i);
-            triangles.add(new int[]{tri.getInt(0), tri.getInt(1), tri.getInt(2)});
+    public void loadMeshData(JSONArray animData, JSONArray triData) {
+        this.triangles.clear();
+        for (int i = 0; i < triData.size(); i++) {
+            JSONArray tri = triData.getJSONArray(i);
+            this.triangles.add(new int[]{tri.getInt(0), tri.getInt(1), tri.getInt(2)});
         }
-
-        animationData = p.loadJSONArray(animFile);
-        totalFrames = animationData.size();
+    
+        this.animationData = animData;
+        this.totalFrames = animationData.size();
+        
+        this.updateAnimation();
     }
 
     public void updateAnimation() {
@@ -171,5 +173,4 @@ class Face {
             p.image(this.img, 0, 0);
         }
     }
-
 }
