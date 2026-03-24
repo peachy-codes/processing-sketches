@@ -21,43 +21,72 @@ ArrayList<ArrayList<Integer>> regionToVertices;
 int[] regionAssignments;
 float[] drawIndices;
 
-float scanSpeed = 0.15f;
-int beamTailLength = 1;
+float scanSpeed = 0.40f;
+int beamTailLength = 5;
 int shiftOffset = 0;
-float beamAlpha = 150.0f;
-float backgroundDim = 0.25f;
+float beamAlpha = 80.0f;
 
-int numFacesConfig = 5;
-float ringRadius = 600.0f;
-float ringRotationSpeed = 0.005f;
-float backgroundZ = -800.0f;
-float foregroundZ = 200.0f;
+int numFacesConfig = 50;
 
 float aberrationOffset = 3.0f;
+
+boolean effectActive = false;
+
+float currentRingRadius = 600.0f;
+float startRingRadius = 600.0f;
+float stopRingRadius = 1000.0f;
+float rateRingRadius = 0.05f;
+
+float currentBackgroundZ = -800.0f;
+float startBackgroundZ = -800.0f;
+float stopBackgroundZ = -1500.0f;
+float rateBackgroundZ = 0.05f;
+
+float currentBackgroundDim = 0.28f;
+float startBackgroundDim = 0.28f;
+float stopBackgroundDim = 0.8f;
+float rateBackgroundDim = 0.05f;
+
+float currentRingRotSpeed = 0.005f;
+float startRingRotSpeed = 0.005f;
+float stopRingRotSpeed = 0.02f;
+float rateRingRotSpeed = 0.05f;
 
 ArrayList<PImage> originalImages;
 ArrayList<PImage> aberratedImages;
 ArrayList<PImage> displayImages;
 
 void setup() {
-    size(1024, 768, P3D);
+    size(1920, 1080, P3D);
     textureMode(NORMAL);
     defaultEyeZ = (height / 2.0f) / tan(PI * 30.0f / 180.0f);
     frameRate(60);
 
     cp5 = new ControlP5(this);
     cp5.setAutoDraw(false);
+    
     cp5.addSlider("scanSpeed").setPosition(20, 20).setRange(0.01f, 2.0f).setValue(0.40f);
     cp5.addSlider("beamTailLength").setPosition(20, 50).setRange(1, 50).setValue(5);
     cp5.addSlider("beamAlpha").setPosition(20, 80).setRange(10.0f, 255.0f).setValue(80.0f);
-    cp5.addSlider("backgroundDim").setPosition(20, 110).setRange(0.0f, 1.0f).setValue(0.28f).onChange(event -> generateDisplayImages());
-    cp5.addSlider("numFacesConfig").setPosition(20, 140).setRange(1, 100).setValue(50);
-    cp5.addSlider("ringRadius").setPosition(20, 170).setRange(100.0f, 1500.0f).setValue(600.0f);
-    cp5.addSlider("backgroundZ").setPosition(20, 200).setRange(-3000.0f, 0.0f).setValue(-800.0f);
-    cp5.addSlider("ringRotationSpeed").setPosition(20, 230).setRange(0.0f, 0.05f).setValue(0.005f);
-    
-    cp5.addSlider("aberrationOffset").setPosition(20, 260).setRange(0.0f, 15.0f).setValue(3.0f).onChange(event -> applyAberrationEffect());
-    
+    cp5.addSlider("numFacesConfig").setPosition(20, 110).setRange(1, 100).setValue(50);
+    cp5.addSlider("aberrationOffset").setPosition(20, 140).setRange(0.0f, 15.0f).setValue(3.0f).onChange(event -> applyAberrationEffect());
+
+    cp5.addSlider("startRingRadius").setPosition(20, 170).setRange(100.0f, 1500.0f).setValue(600.0f);
+    cp5.addSlider("stopRingRadius").setPosition(180, 170).setRange(100.0f, 1500.0f).setValue(1000.0f);
+    cp5.addSlider("rateRingRadius").setPosition(340, 170).setRange(0.001f, 0.2f).setValue(0.05f);
+
+    cp5.addSlider("startBackgroundZ").setPosition(20, 200).setRange(-3000.0f, 0.0f).setValue(-800.0f);
+    cp5.addSlider("stopBackgroundZ").setPosition(180, 200).setRange(-3000.0f, 0.0f).setValue(-1500.0f);
+    cp5.addSlider("rateBackgroundZ").setPosition(340, 200).setRange(0.001f, 0.2f).setValue(0.05f);
+
+    cp5.addSlider("startRingRotSpeed").setPosition(20, 230).setRange(0.0f, 0.1f).setValue(0.005f);
+    cp5.addSlider("stopRingRotSpeed").setPosition(180, 230).setRange(0.0f, 0.1f).setValue(0.02f);
+    cp5.addSlider("rateRingRotSpeed").setPosition(340, 230).setRange(0.001f, 0.2f).setValue(0.05f);
+
+    cp5.addSlider("startBackgroundDim").setPosition(20, 260).setRange(0.0f, 1.0f).setValue(0.28f);
+    cp5.addSlider("stopBackgroundDim").setPosition(180, 260).setRange(0.0f, 1.0f).setValue(0.8f);
+    cp5.addSlider("rateBackgroundDim").setPosition(340, 260).setRange(0.001f, 0.2f).setValue(0.05f);
+
     cp5.addButton("applyLayout").setPosition(20, 290).setSize(100, 20);
 
     faceImages = new ImageSequence(this);
@@ -80,7 +109,7 @@ void setup() {
     targetFace = new MosaicFace(targetImg, targetUVs, 0x00000000);
     targetFace.x = 0;
     targetFace.y = 0;
-    targetFace.z = foregroundZ;
+    targetFace.z = 200.0f;
     targetFace.loadMeshData(this, "data/animation_1.json", "data/triangles.json");
 
     aberratedImages = new ArrayList<PImage>();
@@ -180,16 +209,33 @@ void updateFacePositions() {
     for (int i = 0; i < num_faces; i++) {
         Face f = facesToUse.get(i);
         float angle = i * angleStep + ringRotationAngle;
-        f.x = cos(angle) * ringRadius;
-        f.y = sin(angle) * ringRadius;
-        f.z = backgroundZ;
+        f.x = cos(angle) * currentRingRadius;
+        f.y = sin(angle) * currentRingRadius;
+        f.z = currentBackgroundZ;
     }
 }
 
 void draw() {
     background(20);
 
-    ringRotationAngle += ringRotationSpeed;
+    float targetRingRadius = effectActive ? stopRingRadius : startRingRadius;
+    currentRingRadius = lerp(currentRingRadius, targetRingRadius, rateRingRadius);
+
+    float targetBackgroundZ = effectActive ? stopBackgroundZ : startBackgroundZ;
+    currentBackgroundZ = lerp(currentBackgroundZ, targetBackgroundZ, rateBackgroundZ);
+
+    float targetRingRotSpeed = effectActive ? stopRingRotSpeed : startRingRotSpeed;
+    currentRingRotSpeed = lerp(currentRingRotSpeed, targetRingRotSpeed, rateRingRotSpeed);
+
+    float targetBackgroundDim = effectActive ? stopBackgroundDim : startBackgroundDim;
+    float prevBackgroundDim = currentBackgroundDim;
+    currentBackgroundDim = lerp(currentBackgroundDim, targetBackgroundDim, rateBackgroundDim);
+
+    if (abs(currentBackgroundDim - prevBackgroundDim) > 0.005f) {
+        generateDisplayImages();
+    }
+
+    ringRotationAngle += currentRingRotSpeed;
     updateFacePositions();
 
     if (mousePressed && !cp5.isMouseOver()) {
@@ -304,7 +350,7 @@ void generateDisplayImages() {
                     int idx = x + y * stolen.width;
                     int c = stolen.pixels[idx];
                     float g = (red(c) + green(c) + blue(c)) / 3.0f;
-                    stolen.pixels[idx] = color(g * backgroundDim); 
+                    stolen.pixels[idx] = color(g * currentBackgroundDim); 
                 }
             }
         }
@@ -341,6 +387,7 @@ ArrayList<PImage> getActiveImages() {
 }
 
 void keyPressed() {
+    if (key == 't') { effectActive = !effectActive; }
     if (key == 'o') { zoom *= 1.1; }
     if (key == 'p') { zoom *= 0.9; }
     if (key == 's') { 
