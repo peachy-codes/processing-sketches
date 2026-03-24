@@ -80,7 +80,7 @@ void setup() {
     cp5.addSlider("numFacesConfig").setPosition(20, 110).setRange(1, 100).setValue(50);
     cp5.addSlider("aberrationOffset").setPosition(20, 140).setRange(0.0f, 15.0f).setValue(3.0f).onChange(event -> applyAberrationEffect());
 
-    cp5.addSlider("baseRingRadius").setPosition(20, 170).setRange(100.0f, 1500.0f).setValue(100.0f);
+    cp5.addSlider("baseRingRadius").setPosition(20, 170).setRange(10.0f, 1500.0f).setValue(10.0f);
     cp5.addSlider("activeRingRadius").setPosition(180, 170).setRange(100.0f, 1500.0f).setValue(1500.0f);
     cp5.addSlider("rateRingRadius").setPosition(340, 170).setRange(0.001f, 0.2f).setValue(0.01f);
 
