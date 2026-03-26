@@ -119,11 +119,11 @@ class Face {
         this.activate();
     }
     
-    public void activateRandomPixels() {
-        int sX = (int)(Math.random() * this.img.width);
-        int sY = (int)(Math.random() * this.img.height);
-        int w = (int)(Math.random() * (this.img.width - sX));
-        int h = (int)(Math.random() * (this.img.height - sY));
+    public void activateRandomPixels(PApplet p) {
+        int sX = (int)(p.random(this.img.width));
+        int sY = (int)(p.random(this.img.height));
+        int w = (int)(p.random(this.img.width - sX));
+        int h = (int)(p.random(this.img.height - sY));
         PixelRegion pr = new PixelRegion(sX, sY, w, h);
         this.activePixels.add(pr);
         this.activate();

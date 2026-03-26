@@ -4,7 +4,7 @@ import java.io.File;
 ControlP5 cp5;
 ImageSequence faceImages;
 ArrayList<Face> facesToUse;
-int resizeDims = 200;
+int resizeDims = 250;
 
 MosaicFace targetFace;
 RegionMap regionMap;
@@ -24,9 +24,10 @@ float[] drawIndices;
 
 boolean loadConfigOnLaunch = true;
 boolean effectActive = false;
-boolean isReady = false;
+volatile boolean isReady = false;
 boolean isLoading = false;
 boolean animateFaces = false;
+boolean prevEffectActive = false;
 
 float scanSpeed = 0.40f;
 int beamTailLength = 5;
@@ -60,7 +61,7 @@ float baseRingRotSpeed = 0.0001f;
 float activeRingRotSpeed = 0.001f;
 float rateRingRotSpeed = 0.01f;
 
-float shiftTimer = 0.0f;
+int lastShiftTime = 0;
 float currentShiftInterval = 100.0f;
 float baseShiftInterval = 100.0f;
 float activeShiftInterval = 10.0f;
@@ -75,7 +76,7 @@ JSONArray globalTriangleData;
 
 void setup() {
     pixelDensity(1);
-    size(1024, 768, P3D);
+    size(1200, 1200, P3D);
     //fullScreen(P3D);
     textureMode(NORMAL);
     defaultEyeZ = (height / 2.0f) / tan(PI * 30.0f / 180.0f);
@@ -135,8 +136,13 @@ void setup() {
 }
 
 void initializeHeavyAssets() {
-    globalAnimationData = loadJSONArray("data/animation_1.json");
-    globalTriangleData = loadJSONArray("data/triangles.json");
+    try {
+        globalAnimationData = loadJSONArray("data/animation_1.json");
+        globalTriangleData = loadJSONArray("data/triangles.json");
+    } catch (Exception e) {
+        globalAnimationData = new JSONArray();
+        globalTriangleData = new JSONArray();
+    }
 
     faceImages = new ImageSequence(this);
     faceImages.loadImages("data/faces", "data/uv_maps");
@@ -144,8 +150,8 @@ void initializeHeavyAssets() {
 
     PImage targetImg = createImage(resizeDims, resizeDims, ARGB);
     JSONArray targetUVs = new JSONArray();
-    
-    if (faceImages.faceImages.size() > 0) {
+
+    if (faceImages.uvMaps != null && faceImages.uvMaps.size() > 0 && faceImages.uvMaps.get(0) != null) {
         for (int i = 0; i < faceImages.uvMaps.get(0).size(); i++) {
             JSONArray point = new JSONArray();
             JSONArray sourceUV = faceImages.uvMaps.get(0).getJSONArray(i);
@@ -165,7 +171,6 @@ void initializeHeavyAssets() {
     displayImages = new ArrayList<PImage>();
 
     applyLayout();
-    
     isReady = true;
 }
 
@@ -293,26 +298,29 @@ void draw() {
     float targetRingRotSpeed = effectActive ? activeRingRotSpeed : baseRingRotSpeed;
     currentRingRotSpeed = lerp(currentRingRotSpeed, targetRingRotSpeed, rateRingRotSpeed);
 
-    float targetBackgroundDim = effectActive ? activeBackgroundDim : baseBackgroundDim;
-    float prevBackgroundDim = currentBackgroundDim;
-    currentBackgroundDim = lerp(currentBackgroundDim, targetBackgroundDim, rateBackgroundDim);
-    
-    float targetNoiseScale = effectActive ? activeNoiseScale : baseNoiseScale;
-    float prevNoiseScale = currentNoiseScale;
-    currentNoiseScale = lerp(currentNoiseScale, targetNoiseScale, rateNoiseScale);
-    
     float targetShiftInterval = effectActive ? activeShiftInterval : baseShiftInterval;
     currentShiftInterval = lerp(currentShiftInterval, targetShiftInterval, rateShiftInterval);
 
-    boolean needsMapUpdate = abs(currentNoiseScale - prevNoiseScale) > 0.0001f;
+    float targetBackgroundDim = effectActive ? activeBackgroundDim : baseBackgroundDim;
+    float prevBackgroundDim = currentBackgroundDim;
+    currentBackgroundDim = lerp(currentBackgroundDim, targetBackgroundDim, rateBackgroundDim);
+
+    boolean needsMapUpdate = false;
     boolean needsImageUpdate = abs(currentBackgroundDim - prevBackgroundDim) > 0.0001f;
-    
+
+    if (effectActive != prevEffectActive) {
+        currentNoiseScale = effectActive ? activeNoiseScale : baseNoiseScale;
+        needsMapUpdate = true;
+        prevEffectActive = effectActive;
+    }
+
     if (needsMapUpdate) {
         regionMap.generateNoise(currentNoiseScale);
-        
+
         for (int i = 0; i < regionMap.numRegions; i++) {
             regionToVertices.get(i).clear();
         }
+
         for (int i = 0; i < targetFace.uvCoords.size(); i++) {
             float[] uv = targetFace.uvCoords.get(i);
             int px = constrain((int)(uv[0] * regionMap.width), 0, regionMap.width - 1);
@@ -325,10 +333,10 @@ void draw() {
         needsImageUpdate = true;
     }
     
-    shiftTimer += 1.0f;
-    if (shiftTimer >= currentShiftInterval) {
+    int currentMillis = millis();
+    if (currentMillis - lastShiftTime >= (currentShiftInterval * 33.33f)) {
         applyShiftOffset();
-        shiftTimer = 0.0f;
+        lastShiftTime = currentMillis;
         needsImageUpdate = false;
     }
 
@@ -385,6 +393,12 @@ void draw() {
     camera();
     noLights();
     cp5.draw();
+    
+    fill(0, 255, 0);
+    textSize(16);
+    textAlign(LEFT, TOP);
+    text("FPS: " + (int)frameRate, width - 80, 20);
+    
     hint(ENABLE_DEPTH_TEST);
 }
 

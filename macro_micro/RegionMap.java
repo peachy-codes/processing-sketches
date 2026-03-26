@@ -18,8 +18,8 @@ class RegionMap {
     public void generateVoronoi() {
         int[][] seeds = new int[numRegions][2];
         for (int i = 0; i < numRegions; i++) {
-            seeds[i][0] = (int)(Math.random() * width);
-            seeds[i][1] = (int)(Math.random() * height);
+            seeds[i][0] = (int)(p.random(width));
+            seeds[i][1] = (int)(p.random(height));
         }
 
         for (int x = 0; x < width; x++) {
@@ -43,7 +43,7 @@ class RegionMap {
     }
 
     public void generateNoise(float scale) {
-        p.noiseSeed((long)(Math.random() * 10000));
+        p.noiseSeed((long)(p.random(10000)));
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
                 float n = p.noise(x * scale, y * scale);

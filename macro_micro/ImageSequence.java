@@ -46,21 +46,23 @@ public class ImageSequence {
         if (this.faceImages == null || this.faceImages.size() == 0) {
             return null;
         }
-        PImage img = faceImages.get(currentIndex);
-        return img;
+        return faceImages.get(currentIndex);
     }
 
     public JSONArray getNextUV() {
         if (this.uvMaps == null || this.uvMaps.size() == 0) {
             return null;
         }
-        JSONArray uv = uvMaps.get(currentIndex);
-        this.currentIndex++;
-        
-        if (this.currentIndex >= faceImages.size()) {
-            this.currentIndex = 0;
+        return uvMaps.get(currentIndex);
+    }
+    
+    public void advance() {
+        if (this.faceImages != null && this.faceImages.size() > 0) {
+            this.currentIndex++;
+            if (this.currentIndex >= faceImages.size()) {
+                this.currentIndex = 0;
+            }
         }
-        return uv;
     }
     
     public void scaleImages(int x, int y) {
