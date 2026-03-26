@@ -4,7 +4,7 @@ import java.io.File;
 ControlP5 cp5;
 ImageSequence faceImages;
 ArrayList<Face> facesToUse;
-int resizeDims = 100;
+int resizeDims = 200;
 
 MosaicFace targetFace;
 RegionMap regionMap;
@@ -74,10 +74,12 @@ JSONArray globalAnimationData;
 JSONArray globalTriangleData;
 
 void setup() {
-    size(1280, 1024, P3D);
+    pixelDensity(1);
+    size(1024, 768, P3D);
+    //fullScreen(P3D);
     textureMode(NORMAL);
     defaultEyeZ = (height / 2.0f) / tan(PI * 30.0f / 180.0f);
-    frameRate(60);
+    frameRate(30);
 
     cp5 = new ControlP5(this);
     cp5.setAutoDraw(false);
