@@ -61,19 +61,17 @@ void main() {
   vec4 texColor = texture2D(texture, vertTexCoord.st);
   if (texColor.a < 0.05) discard;
   
-  // Unique seed per face
-  float faceSeed = fract(sin(float(myFaceIndex) * 12.9898) * 43758.5453) * 2000.0;
-  vec3 noisePos = vec3(vertTexCoord.s * noiseScale, vertTexCoord.t * noiseScale, globalNoiseZ + faceSeed);
+  float faceSeed = float(myFaceIndex) * 10.0;
+  vec3 noisePos = vec3(vertTexCoord.s * noiseScale, vertTexCoord.t * noiseScale + faceSeed, globalNoiseZ + faceSeed);
   float n = (snoise(noisePos) + 1.0) * 0.5;
   
   if (isMosaicCenter) {
     if (n > noiseThreshold) {
       gl_FragColor = texColor;
     } else {
-      discard; // This MUST happen to prevent white-out stacking
+      discard;
     }
   } else {
-    // Ring faces draw with the dimming logic
     if (n > noiseThreshold) {
       gl_FragColor = texColor;
     } else {
