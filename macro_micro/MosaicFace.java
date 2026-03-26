@@ -1,74 +1,77 @@
 import processing.core.PApplet;
 import processing.core.PImage;
 import processing.data.JSONArray;
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 class MosaicFace extends Face {
     int emptyColor;
+    ArrayList<PImage> maskedImages;
 
     public MosaicFace(PImage img, JSONArray uvData, int emptyColor) {
         super(img, uvData);
         this.emptyColor = emptyColor;
+        this.maskedImages = new ArrayList<PImage>();
     }
 
-    public void updateFromImages(ArrayList<PImage> activeImages, RegionMap regionMap, int[] regionAssignments) {
-        this.img.loadPixels();
+    public void updateMasks(PApplet p, ArrayList<Face> activeFaces, RegionMap regionMap, int[] regionAssignments) {
+        int numActive = activeFaces.size();
         
-        int numActive = activeImages.size();
-        
-        if (numActive == 0) {
-            Arrays.fill(this.img.pixels, this.emptyColor);
-            this.img.updatePixels();
-            return;
+        while (this.maskedImages.size() < numActive) {
+            this.maskedImages.add(p.createImage(regionMap.width, regionMap.height, PApplet.ARGB));
         }
-
-        for (PImage sourceImg : activeImages) {
+        
+        for (int i = 0; i < numActive; i++) {
+            PImage maskImg = this.maskedImages.get(i);
+            PImage sourceImg = activeFaces.get(i).img;
+            
+            maskImg.loadPixels();
             sourceImg.loadPixels();
-        }
-
-        for (int x = 0; x < this.img.width; x++) {
-            for (int y = 0; y < this.img.height; y++) {
-                int targetIndex = x + y * this.img.width;
-                
-                if (x < regionMap.width && y < regionMap.height) {
-                    int regionId = regionMap.map[x][y];
-                    int activeListIndex = regionAssignments[regionId];
-                    
-                    PImage activeImg = activeImages.get(activeListIndex);
-                    
-                    if (x < activeImg.width && y < activeImg.height) {
-                        int sourceIndex = x + y * activeImg.width;
-                        this.img.pixels[targetIndex] = activeImg.pixels[sourceIndex];
-                    } else {
-                        this.img.pixels[targetIndex] = this.emptyColor;
+            
+            Arrays.fill(maskImg.pixels, this.emptyColor);
+            
+            for (int x = 0; x < regionMap.width; x++) {
+                for (int y = 0; y < regionMap.height; y++) {
+                    int rId = regionMap.map[x][y];
+                    if (regionAssignments[rId] == i) {
+                        int idx = x + y * regionMap.width;
+                        if (x < sourceImg.width && y < sourceImg.height) {
+                            int sourceIdx = x + y * sourceImg.width;
+                            maskImg.pixels[idx] = sourceImg.pixels[sourceIdx];
+                        }
                     }
-                } else {
-                     this.img.pixels[targetIndex] = this.emptyColor;
                 }
             }
+            maskImg.updatePixels();
         }
-        this.img.updatePixels();
     }
 
-    public void draw(PApplet p) {
-        if (this.currentFrameVertices.size() > 0) {
-            p.pushStyle();
-            p.noStroke();
-            p.fill(255);
+    public void drawMultiPass(PApplet p, ArrayList<Face> activeFaces) {
+        if (this.currentFrameVertices.size() == 0 || activeFaces.size() == 0) return;
+        
+        p.pushStyle();
+        p.noStroke();
+        p.fill(255);
+        
+        for (int i = 0; i < activeFaces.size(); i++) {
+            if (i >= this.maskedImages.size()) break;
+            
+            PImage textureImg = this.maskedImages.get(i);
+            Face sourceFace = activeFaces.get(i);
+            
             p.beginShape(PApplet.TRIANGLES);
-            p.texture(this.img);
-
+            p.texture(textureImg);
+            
             for (int[] tri : this.triangles) {
                 for (int j = 0; j < 3; j++) {
                     int idx = tri[j];
                     float[] v = this.currentFrameVertices.get(idx);
-                    float[] uv = this.uvCoords.get(idx);
+                    float[] uv = sourceFace.uvCoords.get(idx);
                     p.vertex(v[0], v[1], v[2], uv[0], uv[1]);
                 }
             }
             p.endShape();
-            p.popStyle();
         }
+        p.popStyle();
     }
 }

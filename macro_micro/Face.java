@@ -6,6 +6,7 @@ import java.util.ArrayList;
 class Face {
     PImage img;
     float x, y, z;
+    float rotationZ = 0.0f;
     boolean active;
     ArrayList<PixelRegion> activePixels;
     

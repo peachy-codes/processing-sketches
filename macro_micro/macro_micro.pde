@@ -12,7 +12,7 @@ RegionMap regionMap;
 int activeIndex = 0;
 float rotX = 0;
 float rotY = 0;
-float zoom = 1.2f;
+float zoom = 0.9f;
 float defaultEyeZ;
 float currentEyeZ;
 
@@ -40,6 +40,7 @@ float currentNoiseScale = 0.05f;
 float baseNoiseScale = 0.05f;
 float activeNoiseScale = 0.2f;
 float rateNoiseScale = 0.05f;
+float emitterScale = 0.5f;
 
 float currentRingRadius = 100.0f;
 float baseRingRadius = 100.0f;
@@ -254,8 +255,9 @@ void applyAberrationEffect() {
     for (int i = 0; i < facesToUse.size(); i++) {
         facesToUse.get(i).img = aberratedImages.get(i);
     }
-    targetFace.updateFromImages(getActiveImages(), regionMap, regionAssignments);
-
+    
+    targetFace.updateMasks(this, facesToUse, regionMap, regionAssignments);
+    
     generateDisplayImages();
 }
 
@@ -269,6 +271,7 @@ void updateFacePositions() {
         f.x = cos(angle) * currentRingRadius;
         f.y = sin(angle) * currentRingRadius;
         f.z = currentBackgroundZ;
+        f.rotationZ = angle + HALF_PI;
     }
 }
 
@@ -279,7 +282,6 @@ void draw() {
         textSize(24);
         textAlign(CENTER, CENTER);
         text("Loading JSON data and rendering layout...", width/2, height/2);
-        
         if (!isLoading) {
             isLoading = true;
             thread("initializeHeavyAssets");
@@ -328,8 +330,7 @@ void draw() {
             int rId = regionMap.map[px][py];
             regionToVertices.get(rId).add(i);
         }
-        
-        targetFace.updateFromImages(getActiveImages(), regionMap, regionAssignments);
+        targetFace.updateMasks(this, facesToUse, regionMap, regionAssignments);
         needsImageUpdate = true;
     }
     
@@ -366,6 +367,15 @@ void draw() {
         Face f = facesToUse.get(i);
         pushMatrix();
         translate(f.x, f.y, f.z);
+        
+        float fCenterX = f.meshScaleX / 2.0f;
+        float fCenterY = f.meshScaleY / 2.0f;
+        
+        translate(fCenterX, fCenterY, 0);
+        rotateZ(f.rotationZ);
+        scale(emitterScale);
+        translate(-fCenterX, -fCenterY, 0);
+        
         if (animateFaces) {
           f.updateAnimation();
         }
@@ -382,7 +392,8 @@ void draw() {
     if (animateFaces) {
         targetFace.updateAnimation();
     }
-    targetFace.draw(this);
+    targetFace.drawMultiPass(this, facesToUse);
+    
     popMatrix();
 
     drawBeams();
@@ -435,8 +446,26 @@ void drawBeams() {
             float globalTargetZ = targetFace.z + targetVert[2];
 
             float[] bgVert = bgFace.currentFrameVertices.get(targetVertIndex);
-            float bgVertX = bgFace.x + bgVert[0];
-            float bgVertY = bgFace.y + bgVert[1];
+            
+            float fCenterX = bgFace.meshScaleX / 2.0f;
+            float fCenterY = bgFace.meshScaleY / 2.0f;
+
+            float vx = (bgVert[0] - fCenterX) * emitterScale;
+            float vy = (bgVert[1] - fCenterY) * emitterScale;
+            float vz = bgVert[2] * emitterScale;
+
+            float cosR = cos(bgFace.rotationZ);
+            float sinR = sin(bgFace.rotationZ);
+
+            float rotX = vx * cosR - vy * sinR;
+            float rotY = vx * sinR + vy * cosR;
+
+            float finalX = rotX + fCenterX;
+            float finalY = rotY + fCenterY;
+
+            float bgVertX = bgFace.x + finalX;
+            float bgVertY = bgFace.y + finalY;
+
             float bgVertZ = bgFace.z + bgVert[2];
 
             int texX = constrain((int)(targetUV[0] * sourceImg.width), 0, sourceImg.width - 1);
@@ -508,7 +537,6 @@ ArrayList<PImage> getActiveImages() {
 void applyShiftOffset() {
     int totalFaces = facesToUse.size();
     if (totalFaces == 0) return;
-    
     int minFaces = max(1, totalFaces / 2);
     int numFacesToSelect = (int)random(minFaces, totalFaces + 1);
 
@@ -527,7 +555,8 @@ void applyShiftOffset() {
         regionAssignments[i] = selectedFaces.get((int)random(selectedFaces.size()));
     }
 
-    targetFace.updateFromImages(getActiveImages(), regionMap, regionAssignments);
+    targetFace.updateMasks(this, facesToUse, regionMap, regionAssignments);
+    
     generateDisplayImages();
 }
 
