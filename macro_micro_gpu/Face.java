@@ -8,7 +8,8 @@ class Face {
     float x, y, z;
     float rotationZ = 0.0f;
     boolean active;
-    ArrayList<PixelRegion> activePixels;
+    
+    public ArrayList<Integer> activeVertexIndices;
     
     ArrayList<float[]> currentFrameVertices;
     ArrayList<int[]> triangles;
@@ -22,7 +23,7 @@ class Face {
     float meshScaleZ = 100.0f;
     
     float captureAspectRatio = 640.0f / 480.0f;
-    float displayScale = 2.5f;
+    float displayScale = 5.0f;
 
     public Face(PImage img, JSONArray uvData) {
         this.img = img;
@@ -30,7 +31,8 @@ class Face {
         this.y = 0;
         this.z = 0;
         this.active = false;
-        this.activePixels = new ArrayList<PixelRegion>();
+        
+        this.activeVertexIndices = new ArrayList<Integer>();
         this.currentFrameVertices = new ArrayList<float[]>();
         this.triangles = new ArrayList<int[]>();
         this.uvCoords = new ArrayList<float[]>();
@@ -55,7 +57,8 @@ class Face {
         this.y = 0;
         this.z = 0;
         this.active = false;
-        this.activePixels = new ArrayList<PixelRegion>();
+        
+        this.activeVertexIndices = new ArrayList<Integer>();
         this.currentFrameVertices = new ArrayList<float[]>();
         this.triangles = new ArrayList<int[]>();
         this.uvCoords = new ArrayList<float[]>();
@@ -122,28 +125,6 @@ class Face {
     
         currentFrameIndex = (currentFrameIndex + 1) % totalFrames;
     }
-
-    public void activatePixels(PixelRegion region) {
-        this.activePixels.add(region);
-        this.activate();
-    }
-    
-    public void activateRandomPixels(PApplet p) {
-        int sX = (int)(p.random(this.img.width));
-        int sY = (int)(p.random(this.img.height));
-        int w = (int)(p.random(this.img.width - sX));
-        int h = (int)(p.random(this.img.height - sY));
-        PixelRegion pr = new PixelRegion(sX, sY, w, h);
-        this.activePixels.add(pr);
-        this.activate();
-    }
-    
-    public void deactivatePixels(PixelRegion region) {
-        this.activePixels.remove(region);
-        if (this.activePixels.isEmpty()) {
-            this.deactivate();
-        }    
-    }
     
     public void activate() {
         if (!this.active) {
@@ -156,7 +137,6 @@ class Face {
         if (this.active) {
             this.active = false;
             this.z -= 100;
-            this.activePixels.clear();
         }
     }
 

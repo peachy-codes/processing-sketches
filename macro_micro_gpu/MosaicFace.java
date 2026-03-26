@@ -14,10 +14,10 @@ class MosaicFace extends Face {
 
     public void drawMultiPass(PApplet p, ArrayList<Face> activeFaces, PShader shader) {
         if (this.currentFrameVertices.size() == 0 || activeFaces.size() == 0) return;
-        
+
         p.pushStyle();
         p.noStroke();
-        p.fill(0xFF000000);
+        p.blendMode(PApplet.BLEND);
         
         for (int i = 0; i < activeFaces.size(); i++) {
             shader.set("myFaceIndex", i);
@@ -38,6 +38,7 @@ class MosaicFace extends Face {
             }
             p.endShape();
         }
+
         p.popStyle();
     }
 }

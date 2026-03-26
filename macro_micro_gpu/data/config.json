@@ -2,7 +2,7 @@
   "/activeRingRadius": {
     "min": 100,
     "max": 1500,
-    "value": 326.26263427734375
+    "value": 1500
   },
   "/activeShiftInterval": {
     "min": 1,
@@ -12,7 +12,7 @@
   "/activeBackgroundDim": {
     "min": 0,
     "max": 1,
-    "value": 0.1515151560306549
+    "value": 0
   },
   "/rateNoiseScale": {
     "min": 0.0010000000474974513,
@@ -22,7 +22,7 @@
   "/rateRingRadius": {
     "min": 0.0010000000474974513,
     "max": 0.20000000298023224,
-    "value": 0.04120201617479324
+    "value": 0.023111112415790558
   },
   "/beamAlpha": {
     "min": 10,
@@ -32,7 +32,7 @@
   "/baseRingRadius": {
     "min": 5,
     "max": 1500,
-    "value": 5
+    "value": 80.50505065917969
   },
   "/rateShiftInterval": {
     "min": 0.0010000000474974513,
@@ -43,6 +43,11 @@
     "min": 0.0010000000474974513,
     "max": 0.20000000298023224,
     "value": 0.05527272820472717
+  },
+  "/noiseThreshold": {
+    "min": 0,
+    "max": 1,
+    "value": 0.5555555820465088
   },
   "/activeRingRotSpeed": {
     "min": 0,
@@ -67,7 +72,7 @@
   "/numFacesConfig": {
     "min": 1,
     "max": 100,
-    "value": 38
+    "value": 37
   },
   "/baseRingRotSpeed": {
     "min": 0,
@@ -92,21 +97,21 @@
   "/scanSpeed": {
     "min": 0.009999999776482582,
     "max": 2,
-    "value": 0.3115151524543762
+    "value": 0.009999999776482582
   },
   "/activeBackgroundZ": {
     "min": -3000,
     "max": 0,
-    "value": 0
+    "value": -333.333251953125
   },
   "/baseShiftInterval": {
     "min": 1,
     "max": 300,
-    "value": 22.14141273498535
+    "value": 300
   },
   "/rateRingRotSpeed": {
     "min": 0.0010000000474974513,
     "max": 0.20000000298023224,
-    "value": 0.007030303589999676
+    "value": 0.20000000298023224
   }
 }
