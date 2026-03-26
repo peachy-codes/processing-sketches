@@ -7,7 +7,10 @@ ArrayList<Face> facesToUse;
 int resizeDims = 600;
 
 MosaicFace targetFace;
-RegionMap regionMap;
+float globalNoiseZ = 0.0f;
+PImage regionMapTexture;
+float[] rawNoiseBuffer;
+
 int activeIndex = 0;
 float rotX = 0;
 float rotY = 0;
@@ -72,7 +75,6 @@ JSONArray globalAnimationData;
 JSONArray globalTriangleData;
 
 PShader mosaicShader;
-PImage regionMapTexture;
 
 void setup() {
     pixelDensity(1);
@@ -142,13 +144,12 @@ void setupShader() {
         "uniform int myFaceIndex;",
         "uniform float dimFactor;",
         "uniform bool isMosaicCenter;",
-        "uniform vec2 texSize;",
         "varying vec4 vertColor;",
         "varying vec4 vertTexCoord;",
         "void main() {",
-        "vec2 snappedUV = (floor(vertTexCoord.st * texSize) + 0.5) / texSize;",
         "vec4 texColor = texture2D(texture, vertTexCoord.st);",
-        "vec4 regionColor = texture2D(regionMapTex, snappedUV);",
+        "if (texColor.a < 0.05) discard;",
+        "vec4 regionColor = texture2D(regionMapTex, vertTexCoord.st);",
         "int rId = int(floor(regionColor.r * 255.0 + 0.5));",
         "if (rId >= 0 && rId < 100) {",
         "int assignedFace = regionAssignments[rId];",
@@ -209,7 +210,6 @@ void initializeHeavyAssets() {
 
 void applyLayout() {
     facesToUse = constructFaces(faceImages, numFacesConfig);
-    
     originalImages = new ArrayList<PImage>();
 
     for (Face f : facesToUse) {
@@ -223,51 +223,70 @@ void applyLayout() {
         f.activate();
     }
 
-    regionMap = new RegionMap(this, resizeDims, resizeDims, numFacesConfig);
-    regionMap.generateNoise(activeNoiseScale);
-
-    regionAssignments = new int[regionMap.numRegions];
-
-    for (int i = 0; i < regionMap.numRegions; i++) {
+    regionAssignments = new int[numFacesConfig];
+    for (int i = 0; i < numFacesConfig; i++) {
         regionAssignments[i] = 0;
     }
 
     regionToVertices = new ArrayList<ArrayList<Integer>>();
-    for (int i = 0; i < regionMap.numRegions; i++) {
+    for (int i = 0; i < numFacesConfig; i++) {
         regionToVertices.add(new ArrayList<Integer>());
     }
 
-    for (int i = 0; i < targetFace.uvCoords.size(); i++) {
-        float[] uv = targetFace.uvCoords.get(i);
-        int px = constrain((int)(uv[0] * regionMap.width), 0, regionMap.width - 1);
-        int py = constrain((int)(uv[1] * regionMap.height), 0, regionMap.height - 1);
-        int rId = regionMap.map[px][py];
-        regionToVertices.get(rId).add(i);
-    }
-
     drawIndices = new float[numFacesConfig];
-
     for (int i = 0; i < numFacesConfig; i++) {
         drawIndices[i] = 0.0f;
     }
 
-    updateRegionTexture();
     applyShiftOffset();
 }
 
-void updateRegionTexture() {
-    if (regionMapTexture == null || regionMapTexture.width != regionMap.width) {
-        regionMapTexture = createImage(regionMap.width, regionMap.height, RGB);
+void updateRegions(float shiftSpeed) {
+    globalNoiseZ += shiftSpeed * 0.2f;
+
+    if (regionMapTexture == null || regionMapTexture.width != resizeDims) {
+        regionMapTexture = createImage(resizeDims, resizeDims, RGB);
     }
-    regionMapTexture.loadPixels();
-    for (int x = 0; x < regionMap.width; x++) {
-        for (int y = 0; y < regionMap.height; y++) {
-            int rId = regionMap.map[x][y];
-            regionMapTexture.pixels[x + y * regionMap.width] = color(rId, 0, 0);
+    if (rawNoiseBuffer == null || rawNoiseBuffer.length != resizeDims * resizeDims) {
+        rawNoiseBuffer = new float[resizeDims * resizeDims];
+    }
+    
+    float minN = 1.0f;
+    float maxN = 0.0f;
+    
+    for (int y = 0; y < resizeDims; y++) {
+        for (int x = 0; x < resizeDims; x++) {
+            float n = noise(x * currentNoiseScale, y * currentNoiseScale, globalNoiseZ);
+            rawNoiseBuffer[x + y * resizeDims] = n;
+            if (n < minN) minN = n;
+            if (n > maxN) maxN = n;
         }
     }
+    
+    if (maxN <= minN) maxN = minN + 0.001f;
+    
+    regionMapTexture.loadPixels();
+    for (int i = 0; i < rawNoiseBuffer.length; i++) {
+        float norm = (rawNoiseBuffer[i] - minN) / (maxN - minN);
+        int rId = constrain((int)(norm * numFacesConfig), 0, numFacesConfig - 1);
+        regionMapTexture.pixels[i] = color(rId, 0, 0);
+    }
     regionMapTexture.updatePixels();
+    
+    for (int i = 0; i < numFacesConfig; i++) {
+        regionToVertices.get(i).clear();
+    }
+    
+    for (int i = 0; i < targetFace.uvCoords.size(); i++) {
+        float[] uv = targetFace.uvCoords.get(i);
+        int px = constrain((int)(uv[0] * resizeDims), 0, resizeDims - 1);
+        int py = constrain((int)(uv[1] * resizeDims), 0, resizeDims - 1);
+        int rId = (int)red(regionMapTexture.pixels[px + py * resizeDims]);
+        regionToVertices.get(rId).add(i);
+    }
 }
+
+
 
 void updateFacePositions() {
     int num_faces = facesToUse.size();
@@ -334,7 +353,8 @@ void draw() {
         applyShiftOffset();
         shiftPhase = 0.0f;
     }
-
+    updateRegions(currentShiftSpeed);
+    
     ringRotationAngle += currentRingRotSpeed;
     updateFacePositions();
 
@@ -422,7 +442,7 @@ void drawBeams() {
     strokeWeight(2);
     int num_faces = facesToUse.size();
 
-    for (int regionId = 0; regionId < regionMap.numRegions; regionId++) {
+    for (int regionId = 0; regionId < numFacesConfig; regionId++) {
         int faceIndex = regionAssignments[regionId];
 
         if (faceIndex >= num_faces) continue;
@@ -536,23 +556,38 @@ void applyShiftOffset() {
     int numFacesToSelect = (int)random(minFaces, totalFaces);
 
     ArrayList<Integer> available = new ArrayList<Integer>();
-
     for (int i = 0; i < totalFaces; i++) {
         available.add(i);
-
     }
 
     ArrayList<Integer> selectedFaces = new ArrayList<Integer>();
     for (int i = 0; i < numFacesToSelect; i++) {
-        int idx = (int)random(available.size());
-
-        selectedFaces.add(available.remove(idx));
+        selectedFaces.add(available.remove((int)random(available.size())));
     }
 
-    for (int i = 0; i < regionMap.numRegions; i++) {
-        regionAssignments[i] = selectedFaces.get((int)random(selectedFaces.size()));
-
+    int[] tempAssignments = new int[numFacesConfig];
+    for (int i = 0; i < numFacesConfig; i++) {
+        tempAssignments[i] = -1;
     }
+
+    ArrayList<Integer> availRegions = new ArrayList<Integer>();
+    for (int i = 0; i < numFacesConfig; i++) {
+        availRegions.add(i);
+    }
+
+    for (int i = 0; i < selectedFaces.size(); i++) {
+        int rIdx = (int)random(availRegions.size());
+        int regionId = availRegions.remove(rIdx);
+        tempAssignments[regionId] = selectedFaces.get(i);
+    }
+
+    for (int i = 0; i < numFacesConfig; i++) {
+        if (tempAssignments[i] == -1) {
+            tempAssignments[i] = selectedFaces.get((int)random(selectedFaces.size()));
+        }
+    }
+    
+    regionAssignments = tempAssignments;
 }
 
 void printConfigState() {
