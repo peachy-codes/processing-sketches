@@ -1,0 +1,112 @@
+{
+  "/activeRingRadius": {
+    "min": 100,
+    "max": 1500,
+    "value": 326.26263427734375
+  },
+  "/activeShiftInterval": {
+    "min": 1,
+    "max": 100,
+    "value": 100
+  },
+  "/activeBackgroundDim": {
+    "min": 0,
+    "max": 1,
+    "value": 0.1515151560306549
+  },
+  "/rateNoiseScale": {
+    "min": 0.0010000000474974513,
+    "max": 0.20000000298023224,
+    "value": 0.20000000298023224
+  },
+  "/rateRingRadius": {
+    "min": 0.0010000000474974513,
+    "max": 0.20000000298023224,
+    "value": 0.04120201617479324
+  },
+  "/beamAlpha": {
+    "min": 10,
+    "max": 255,
+    "value": 59.49494934082031
+  },
+  "/baseRingRadius": {
+    "min": 5,
+    "max": 1500,
+    "value": 5
+  },
+  "/rateShiftInterval": {
+    "min": 0.0010000000474974513,
+    "max": 0.20000000298023224,
+    "value": 0.20000000298023224
+  },
+  "/rateBackgroundZ": {
+    "min": 0.0010000000474974513,
+    "max": 0.20000000298023224,
+    "value": 0.05527272820472717
+  },
+  "/activeRingRotSpeed": {
+    "min": 0,
+    "max": 0.10000000149011612,
+    "value": 0.001010101055726409
+  },
+  "/baseBackgroundZ": {
+    "min": -3000,
+    "max": 0,
+    "value": -1030.302978515625
+  },
+  "/beamTailLength": {
+    "min": 1,
+    "max": 50,
+    "value": 50
+  },
+  "/activeNoiseScale": {
+    "min": 0.009999999776482582,
+    "max": 0.5,
+    "value": 0.01494949497282505
+  },
+  "/numFacesConfig": {
+    "min": 1,
+    "max": 100,
+    "value": 38
+  },
+  "/baseRingRotSpeed": {
+    "min": 0,
+    "max": 0.10000000149011612,
+    "value": 9.999999747378752E-5
+  },
+  "/rateBackgroundDim": {
+    "min": 0.0010000000474974513,
+    "max": 0.20000000298023224,
+    "value": 0.20000000298023224
+  },
+  "/baseNoiseScale": {
+    "min": 0.009999999776482582,
+    "max": 1,
+    "value": 0.009999999776482582
+  },
+  "/baseBackgroundDim": {
+    "min": 0,
+    "max": 1,
+    "value": 0.1515151560306549
+  },
+  "/scanSpeed": {
+    "min": 0.009999999776482582,
+    "max": 2,
+    "value": 0.3115151524543762
+  },
+  "/activeBackgroundZ": {
+    "min": -3000,
+    "max": 0,
+    "value": 0
+  },
+  "/baseShiftInterval": {
+    "min": 1,
+    "max": 300,
+    "value": 22.14141273498535
+  },
+  "/rateRingRotSpeed": {
+    "min": 0.0010000000474974513,
+    "max": 0.20000000298023224,
+    "value": 0.007030303589999676
+  }
+}
