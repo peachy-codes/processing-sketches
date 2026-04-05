@@ -1,0 +1,7 @@
+// Planet.java
+// basically a particle!
+
+// planet object stores pos, vel, acc, mass, color
+
+public Planet(Ve3 pos, Vec3 vel, Vec3 acc) {
+  
