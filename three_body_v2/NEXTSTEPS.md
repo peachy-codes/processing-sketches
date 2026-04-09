@@ -73,7 +73,37 @@ public class AestheticManager {
 
 ---
 
-## Stage 3: Spatial Partitioning and Physical Subdivision
+## Stage 3: Retained Mode Rendering (`PShape`) Refactor
+*Goal: Transition from immediate mode to retained mode rendering to support high vertex counts for "painting" trails.*
+
+### Refactored `StandardRenderer`
+Updates the renderer to use `PShape` for planets and trails, significantly reducing CPU-to-GPU overhead.
+
+```java
+public class StandardRenderer implements Renderer {
+    /** List of PShape objects representing each planet's trail. */
+    private ArrayList<PShape> trailShapes;
+    /** A shared PShape template for planet spheres to use retained mode rendering. */
+    private PShape sphereTemplate;
+    
+    /**
+     * Initializes PShape objects for the current universe.
+     * @param universe The current universe.
+     * @param p The PApplet instance.
+     */
+    private void initShapes(Universe universe, PApplet p)
+
+    /**
+     * Appends the latest positions from the universe to the retained trail shapes.
+     * @param universe The current universe.
+     */
+    public void updateShapes(Universe universe)
+}
+```
+
+---
+
+## Stage 4: Spatial Partitioning and Physical Subdivision
 *Goal: Optimize CPU-side calculations and implement dynamic planet behavior.*
 
 ### New Class: `QuadTree3D` (Octree)
@@ -105,7 +135,7 @@ public class QuadTree3D {
 
 ---
 
-## Stage 4: State Buffering and Pre-computation
+## Stage 5: State Buffering and Pre-computation
 *Goal: Implement efficient state storage for the "rewind," "decay," and "stutter" effects, and pre-calculate orbital paths for "painting" aesthetics.*
 
 ### New Class: `HistoryBuffer`
@@ -158,7 +188,7 @@ public class PreComputeEngine {
 
 ---
 
-## Stage 5: GPU Offloading
+## Stage 6: GPU Offloading
 *Goal: Leverage GPU acceleration for large-scale simulations and high-fidelity trail rendering.*
 
 ### New Class: `GPUSimulator` (Interface)
@@ -191,7 +221,7 @@ public interface GPUSimulator {
 
 ---
 
-## Stage 5: Intelligent Camera and Final Polish
+## Stage 7: Intelligent Camera and Final Polish
 *Goal: Automate camera movement and refine user interactions.*
 
 ### New Class: `AutoCamera`
