@@ -10,4 +10,3 @@ public interface Integrator {
      */
     void update(Universe universe, float dt);
 }
-

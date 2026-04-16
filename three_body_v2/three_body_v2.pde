@@ -20,6 +20,7 @@ void setup() {
   scenario.setup(logger);
   
   renderer = new StandardRenderer();
+  renderer.reset(scenario.getUniverse(), this);
   input = new StandardInputHandler(scenario, renderer, logger, this);
   
   defaultEyeZ = (height / 2.0f) / tan(PI * 30.0f / 180.0f);
@@ -47,6 +48,7 @@ void draw() {
   renderer.render(scenario.getUniverse(), this);
   popMatrix();
   
+  lights();
   camera();
   fill(0, 255, 0);
   textSize(16);

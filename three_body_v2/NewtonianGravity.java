@@ -31,8 +31,10 @@ public class NewtonianGravity implements ForceModel {
 
                 Vec3 distVec = Vec3.sub(b.pos, a.pos);
                 float r = distVec.mag();
-
-                float strength = (this.G * a.mass * b.mass) / (r * r);
+                
+                // Add a small softening factor to prevent division by zero and extreme forces
+                float softening = 1.0f; 
+                float strength = (this.G * a.mass * b.mass) / (r * r + softening);
 
                 distVec.normalize();
                 Vec3 forceOnA = Vec3.scale(distVec, strength);

@@ -46,6 +46,7 @@ public class StandardInputHandler implements InputHandler {
         if (key == 'r') {
             scenario.reset();
             logger.setInitialConditions(scenario.getUniverse());
+            renderer.reset(scenario.getUniverse(), p);
         }
         if (key == 'o') { zoom *= 1.1f; }
         if (key == 'p') { zoom *= 0.9f; }

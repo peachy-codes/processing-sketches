@@ -25,11 +25,14 @@ public class RandomNBodyScenario implements Scenario {
     /** The current tick (step) count of the simulation. */
     public int ticks = 0;
     /** The maximum number of ticks allowed before resetting the simulation. */
-    public int maxTicks = 50000;
+    public int maxTicks = 5000000;
     /** The current episode count. */
     public int episodeCount = 0;
-    /** The maximum number of episodes to run. */
+    /** The maximum number of episodes to run. Relevant when logging multiple episodes.*/
     public int maxEpisodes = 1000;
+
+    public int minBodies = 100;
+    public int maxBodies = 101;
     
     private PApplet p;
 
@@ -40,7 +43,7 @@ public class RandomNBodyScenario implements Scenario {
      */
     public RandomNBodyScenario(PApplet p) {
         this.p = p;
-        this.numBodies = (int)p.random(3, 8);
+        this.numBodies = (int)p.random(minBodies, maxBodies);
     }
 
     /**
@@ -93,14 +96,15 @@ public class RandomNBodyScenario implements Scenario {
     public void reset() {
         ticks = 0;
         ArrayList<Planet> planets = new ArrayList<Planet>();
-        Vec3 zeroVec = new Vec3(0, 0, 0);
-        this.numBodies = (int)p.random(3, 8);
+        this.numBodies = (int)p.random(minBodies, maxBodies);
+        int bounds = 300;
         for (int i = 0; i < numBodies; i++) {
-            Vec3 pos = new Vec3(p.random(-100, 100), p.random(-100, 100), p.random(-100, 100));
+            Vec3 pos = new Vec3(p.random(-bounds, bounds), p.random(-bounds, bounds), p.random(-bounds, bounds));
             Vec3 vel = new Vec3(p.random(-5, 5), p.random(-5, 5), p.random(-5, 5));
+            Vec3 acc = new Vec3(0, 0, 0);
             float mass = p.random(1.0f, 30.0f);
             int col = (int)p.random(0xFF000000, 0xFFFFFFFF);
-            planets.add(new Planet(pos, vel, zeroVec, mass, col));
+            planets.add(new Planet(pos, vel, acc, mass, col));
         }
         
         for (Planet a : planets) {
@@ -109,12 +113,14 @@ public class RandomNBodyScenario implements Scenario {
                 if (a == b) continue;
                 Vec3 distVec = Vec3.sub(b.pos, a.pos);
                 float r = distVec.mag();
-                potential -= (G * a.mass * b.mass) / r;
+                // Soften potential energy check
+                potential -= (G * a.mass * b.mass) / (r + 1.0f);
             }
             
             float kinetic = 0.5f * a.mass * a.vel.dot(a.vel);
-            if (kinetic >= -potential) {
+            if (kinetic >= -potential || Float.isNaN(kinetic)) {
                 float maxV = p.sqrt((2.0f * 0.8f * -potential) / a.mass);
+                if (Float.isNaN(maxV)) maxV = 2.0f;
                 a.vel.normalize();
                 a.vel.scale(p.random(0.1f, maxV));
             }
@@ -184,4 +190,3 @@ public class RandomNBodyScenario implements Scenario {
     @Override
     public int getTicks() { return ticks; }
 }
-

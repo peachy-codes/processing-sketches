@@ -1,11 +1,10 @@
 // Universe.java
 
 import java.util.ArrayList;
-import java.util.ArrayDeque;
 
 /**
  * Represents the universe containing all planets and managing the simulation state.
- * It handles global forces, integration, and history recording.
+ * It handles global forces, integration, and history recording using optimized buffers.
  */
 public class Universe {
     /** The list of planets in the universe. */
@@ -18,12 +17,20 @@ public class Universe {
     public Vec3 cm;
     /** The velocity of the center of mass. */
     public Vec3 cmVel;
-    /** A history of planet positions for rendering trails. */
-    public ArrayDeque<Vec3[]> history;
+    
+    /** Circular buffer for planet positions: [step][planetIdx * 3 + (x,y,z)] */
+    private float[][] historyBuffer;
+    /** Current write index in the circular buffer. */
+    private int historyIndex = 0;
+    /** Number of steps currently stored in the buffer. */
+    private int historyCount = 0;
     /** The maximum number of history steps to store. */
-    public int maxHistory = 10000;
+    public int maxHistory = 30000;
+    
     /** The integrator used for updating planet states. */
     public Integrator integrator;
+    /** Total number of simulation steps performed. */
+    public int totalSteps = 0;
 
     /**
      * Constructs a new Universe.
@@ -38,7 +45,10 @@ public class Universe {
         this.forceModel = forceModel;
         this.cm = new Vec3(0f, 0f, 0f);
         this.cmVel = new Vec3(0f, 0f, 0f);
-        this.history = new ArrayDeque<Vec3[]>();
+        
+        // Pre-allocate history buffer
+        this.historyBuffer = new float[maxHistory][planets.size() * 3];
+        
         this.integrator = new VerletIntegrator();
         this.findCenter();
         this.forceModel.applyForces(this);
@@ -68,17 +78,20 @@ public class Universe {
     }
 
     /**
-     * Records the current positions of all planets in the history.
+     * Records the current positions of all planets in the circular buffer.
      */
     public void recordHistory() {
-        Vec3[] currentPositions = new Vec3[planets.size()];
+        float[] currentStep = historyBuffer[historyIndex];
         for (int i = 0; i < planets.size(); i++) {
-            currentPositions[i] = planets.get(i).pos.copy();
+            Planet p = planets.get(i);
+            currentStep[i * 3 + 0] = p.pos.x;
+            currentStep[i * 3 + 1] = p.pos.y;
+            currentStep[i * 3 + 2] = p.pos.z;
         }
-        this.history.addLast(currentPositions);
-
-        if (this.history.size() > this.maxHistory) {
-            this.history.removeFirst();
+        
+        historyIndex = (historyIndex + 1) % maxHistory;
+        if (historyCount < maxHistory) {
+            historyCount++;
         }
     }
 
@@ -87,7 +100,38 @@ public class Universe {
      */
     public void update() {
         this.integrator.update(this, this.dt);
+        this.totalSteps++;
         findCenter();
         recordHistory();
+    }
+    
+    /**
+     * Returns the position of a planet at a specific historical step.
+     * 
+     * @param stepIdx The historical step index (0 to historyCount - 1)
+     * @param planetIdx The index of the planet
+     * @return Vec3 The position at that step
+     */
+    public Vec3 getHistoryPos(int stepIdx, int planetIdx) {
+        if (stepIdx < 0 || stepIdx >= historyCount) return null;
+        
+        // Calculate actual index in circular buffer
+        int actualIdx;
+        if (historyCount < maxHistory) {
+            actualIdx = stepIdx;
+        } else {
+            actualIdx = (historyIndex + stepIdx) % maxHistory;
+        }
+        
+        float[] stepData = historyBuffer[actualIdx];
+        return new Vec3(stepData[planetIdx * 3 + 0], stepData[planetIdx * 3 + 1], stepData[planetIdx * 3 + 2]);
+    }
+    
+    /**
+     * Returns the current number of steps in history.
+     * @return count
+     */
+    public int getHistoryCount() {
+        return historyCount;
     }
 }
