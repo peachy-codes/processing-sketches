@@ -7,8 +7,8 @@ static class Settings {
   static float DEFAULT_STRETCH_LIMIT = -1f; // -1 means unbreakable
   
   // Mesh Generation
-  static int GRID_COLS = 70;
-  static int GRID_ROWS = 20;
+  static int GRID_COLS = 30;
+  static int GRID_ROWS = 30;
   static float GRID_SPACING = 2f;
   
   // Oscillator & Music Pulse Settings
@@ -23,15 +23,15 @@ static class Settings {
   static boolean RANDOM_WALK_ENABLED = true;
   
   // Multi-Mesh Settings
-  static int MESH_COLS = 5;
-  static int MESH_ROWS = 7;
-  static float MESH_SPACING_X = 140.0f;
-  static float MESH_SPACING_Z = 40.0f;
+  static int MESH_COLS = 8;
+  static int MESH_ROWS = 8;
+  static float MESH_SPACING_X = 60.0f;
+  static float MESH_SPACING_Z = 60.0f;
 
   
   // Audio Settings
   static float MIN_AUDIO_THRESHOLD = 0.1f;
-  static int BEAT_SENSITIVITY = 100;
+  static int BEAT_SENSITIVITY = 10;
   
   // Performance Tracking
   static long LAST_PHYSICS_TIME_NS = 0;
@@ -42,7 +42,7 @@ static class Settings {
   static float DRAG_THRESHOLD = 20.0f;
   
   // Visuals
-  static int BACKGROUND_COLOR = 20;
+  static int BACKGROUND_COLOR = 255;
   static int NODE_COLOR = 200;
   static int CONSTRAINT_COLOR = 100;
   
